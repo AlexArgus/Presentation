@@ -1,0 +1,147 @@
+<style>
+.footer {
+    color: black;
+    background: #E8E8E8;
+    position: fixed;
+    top: 90%;
+    text-align:center;
+    width:100%;
+}
+</style>
+
+<style>
+.small-code pre code {
+  font-size: 1em;
+}
+</style>
+
+
+
+WordCloud
+========================================================
+author: by Alexandr Pavlov
+date: `r format(Sys.Date(), format="%a %b %d %Y")`
+font-import: http://fonts.googleapis.com/css?family=Josefin Sans
+font-family: 'Josefin Sans'
+transition: zoom
+
+
+
+
+<small>
+course: Developing Data Products  
+Coursera Data Science Specialisation
+</small>
+
+The Main Idea
+========================================================
+
+A simple word cloud generator, based on [this blog post](http://pirategrunt.com/2013/12/11/24-days-of-r-day-11/) by PirateGrunt.
+
+This small Shiny application demonstrates a <span style="font-weight:bold; color:red;"> 
+Word Cloud</span> of the most common words in a books. 
+   
+The Engine use <span style="font-weight:bold; color:red;"> tm</span>  - text mining package . It's very useful package that use methods for data import, corpus handling, preprocessing, metadata management, and creation of term-document matrices.
+   
+As you can see by **global.R** file raw text of a book consistently transforming so in the end we get **TermDocumentMatrix** - matrix that get us frequency of the words.
+   
+<div class="footer">The font size corresponds to the frequency of words</div> 
+        
+        
+
+global.R - Engine WorkHorse
+========================================================
+class: small-code
+
+```{r, eval=FALSE}
+library(tm)
+library(wordcloud)
+library(memoise)
+
+# The list of valid books
+books <<- list("A Mid Summer Night's Dream" = "mid_summer",
+               "The Merchant of Venice" = "merchant",
+               'Romeo and Juliet'='romeo_juliet',
+               'The Tragedy of Hamlet'='hamlet')
+
+# Using "memoise" to automatically cache the results
+getTermMatrix <- memoise(function(book) {
+        
+        text <- readLines(sprintf("./%s.txt", book), encoding="UTF-8")
+        myCorpus = Corpus(VectorSource(text))
+        myCorpus = tm_map(myCorpus, content_transformer(tolower))
+        myCorpus = tm_map(myCorpus, removePunctuation)
+        myCorpus = tm_map(myCorpus, removeNumbers)
+        myCorpus = tm_map(myCorpus, removeWords, c(stopwords("SMART"))
+        
+        myDTM = TermDocumentMatrix(myCorpus,
+                        control = list(minWordLength = 1))
+        
+        m = as.matrix(myDTM)
+        sort(rowSums(m), decreasing = TRUE)
+})
+```
+
+It should be introduce a few functions:
+========================================================
+
+
+-<span style="font-weight:bold; color:blue;"> 
+memoise(f)</span> - creates mf, a memoised copy of f. A memoised copy is basically a lazier version of the same function: it saves the answers of new invocations, and re-uses the answers of old ones. Under the right circumstances, this can provide a very nice speedup indeed   
+   
+-<span style="font-weight:bold; color:blue;"> 
+   isolate()</span> - Ordinarily, the simple act of reading a reactive value causes a relationship to be established between the caller and the reactive value, where a change to the reactive value will cause the caller to re-execute. (The same applies for the act of getting a reactive expression's value.) The isolate function lets you read a reactive value or expression without establishing this relationship.
+   
+<div class="footer">In a few words this keep off engine to do the same job without necessity</div> 
+        
+        
+
+The Tragedy of Hamlet in a few words
+========================================================
+
+
+
+```{r setup, include=TRUE, echo=FALSE, cache=TRUE, fig.width=7,fig.height=4, dpi=300,out.width="1920px",height="1080px"}
+
+opts_chunk$set(cache=TRUE)
+
+library(tm)
+library(wordcloud)
+library(memoise)
+
+# The list of valid books
+book <-  'hamlet'
+
+getTermMatrix <- memoise(function(book) {
+        
+        text <- readLines(sprintf("./%s.txt", book),
+                          encoding="UTF-8")
+        
+        myCorpus = Corpus(VectorSource(text))
+        myCorpus = tm_map(myCorpus, content_transformer(tolower))
+        myCorpus = tm_map(myCorpus, removePunctuation)
+        myCorpus = tm_map(myCorpus, removeNumbers)
+        myCorpus = tm_map(myCorpus, removeWords,
+                          c(stopwords("SMART"), "thy", "thou", "thee", "the", "and", "but"))
+        
+        myDTM = TermDocumentMatrix(myCorpus,
+                                   control = list(minWordLength = 1))
+        
+        m = as.matrix(myDTM)
+        
+        sort(rowSums(m), decreasing = TRUE)
+})
+
+
+terms <- getTermMatrix(book)
+
+wordcloud(names(terms), terms, scale=c(4,0.5),
+                      min.freq = 25, max.words=80,
+                      colors=brewer.pal(8, "Dark2"))
+
+
+```
+
+
+
+
